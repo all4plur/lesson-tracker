@@ -34,7 +34,7 @@
     <option value="Snowboard">Snowboard</option>
   </select>
   <button onclick="addManualEntry()">Καταχώρηση</button>
-  
+
   <h3>Δεδομένα Μαθημάτων</h3>
   <div id="searchContainer">
     <h4>Αναζήτηση Εγγραφών</h4>
@@ -120,50 +120,58 @@
       actionsCell.appendChild(plusBtn);
       deleteCell.appendChild(deleteBtn);
     }
-function addManualEntry() {
-  const name = document.getElementById('name').value.trim();
-  const surname = document.getElementById('surname').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const lessonsBooked = parseInt(document.getElementById('lessonsBooked').value);
-  const discipline = document.getElementById('discipline').value;
 
-  if (!name || !surname || !phone || isNaN(lessonsBooked)) {
-    alert('Συμπληρώστε όλα τα πεδία σωστά.');
-    return;
-  }
+    function addManualEntry() {
+      const name = document.getElementById('name').value.trim();
+      const surname = document.getElementById('surname').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const lessonsBooked = parseInt(document.getElementById('lessonsBooked').value);
+      const discipline = document.getElementById('discipline').value;
 
-  if (phone.length < 10 || !/^\d+$/.test(phone)) {
-    alert('Ο αριθμός τηλεφώνου πρέπει να περιέχει τουλάχιστον 10 ψηφία.');
-    return;
-  }
+      if (!name || !surname || !phone || isNaN(lessonsBooked)) {
+        alert('Συμπληρώστε όλα τα πεδία σωστά.');
+        return;
+      }
 
-  const entry = {
-    name,
-    surname,
-    phone,
-    discipline,
-    lessonsBooked,
-    lessonsLeft: lessonsBooked
-  };
+      if (phone.length < 10 || !/^\d+$/.test(phone)) {
+        alert('Ο αριθμός τηλεφώνου πρέπει να περιέχει τουλάχιστον 10 ψηφία.');
+        return;
+      }
 
-  addRow(entry);
+      const entry = {
+        name,
+        surname,
+        phone,
+        discipline,
+        lessonsBooked,
+        lessonsLeft: lessonsBooked
+      };
 
-  const formData = new URLSearchParams();
-  for (const key in entry) {
-    formData.append(key, entry[key]);
-  }
+      addRow(entry);
 
-  fetch("https://script.google.com/macros/s/AKfycbw030MSb7oU_xbqphZJVj926HZ068VNrGOWvyS9p-mzpoXruGRx8bufyolLyFvUua75pg/exec", {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: formData
-  });
+      const formData = new URLSearchParams();
+      for (const key in entry) {
+        formData.append(key, entry[key]);
+      }
+
+      fetch("https://script.google.com/macros/s/AKfycbw030MSb7oU_xbqphZJVj926HZ068VNrGOWvyS9p-mzpoXruGRx8bufyolLyFvUua75pg/exec", {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData
+      });
+    }
+
+    document.getElementById('excelFile').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const rawEntries = XLSX.utils.sheet_to_json(sheet);
-
-          console.log('✅ Excel file loaded');
-          console.log('📄 Parsed entries:', rawEntries);
 
           let validRows = 0;
 
@@ -173,8 +181,6 @@ function addManualEntry() {
               const cleanKey = key.toLowerCase().trim();
               entry[cleanKey] = originalEntry[key];
             });
-
-            console.log(`🔍 Row ${index + 1}:`, entry);
 
             if (entry.name && entry.surname && entry.phone && entry['lessons booked']) {
               addRow({
@@ -200,4 +206,6 @@ function addManualEntry() {
 
       reader.readAsArrayBuffer(file);
     });
-</script>
+  </script>
+</body>
+</html>
