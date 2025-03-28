@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Καταγραφή Μαθημάτων</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f4f4f4; cursor: pointer; }
+    input, button, select { margin: 5px; padding: 5px; }
+    button { padding: 5px 10px; font-size: 16px; cursor: pointer; }
+    #searchContainer { margin-top: 30px; margin-bottom: 10px; }
+    #searchInput { width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; }
+    .sorted-asc::after { content: " \25B2"; }
+    .sorted-desc::after { content: " \25BC"; }
+  </style>
+</head>
+<body>
+  <h2>Καταγραφή Μαθημάτων</h2>
+
+  <h3>Εισαγωγή Αρχείου Excel</h3>
+  <input type="file" id="excelFile">
+
+  <h3>Χειροκίνητη Καταχώρηση</h3>
+  <input type="text" id="name" placeholder="Όνομα">
+  <input type="text" id="surname" placeholder="Επώνυμο">
+  <input type="text" id="phone" placeholder="Τηλέφωνο">
+  <input type="number" id="lessonsBooked" placeholder="Μαθήματα Κλεισμένα">
+  <select id="discipline">
+    <option value="Ski">Ski</option>
+    <option value="Snowboard">Snowboard</option>
+  </select>
+  <button onclick="addManualEntry()">Καταχώρηση</button>
+  
+  <h3>Δεδομένα Μαθημάτων</h3>
+  <div id="searchContainer">
+    <h4>Αναζήτηση Εγγραφών</h4>
+    <input type="text" id="searchInput" placeholder="Αναζήτηση με Όνομα, Επώνυμο, Τηλέφωνο ή Άθλημα..." onkeyup="filterTable()">
+  </div>
+
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th onclick="sortTable(0, this)">Όνομα</th>
+        <th onclick="sortTable(1, this)">Επώνυμο</th>
+        <th onclick="sortTable(2, this)">Τηλέφωνο</th>
+        <th onclick="sortTable(3, this)">Άθλημα</th>
+        <th>Μαθήματα Κλεισμένα</th>
+        <th>Μαθήματα Υπόλοιπο</th>
+        <th>Ενέργειες</th>
+        <th>Τελευταίο Μάθημα</th>
+        <th>Διαγραφή</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function addRow(entry) {
+      const tableBody = document.querySelector('#dataTable tbody');
+      const row = tableBody.insertRow();
+      row.insertCell(0).textContent = entry.name;
+      row.insertCell(1).textContent = entry.surname;
+      row.insertCell(2).textContent = entry.phone;
+      row.insertCell(3).textContent = entry.discipline;
+      row.insertCell(4).textContent = entry.lessonsBooked;
+
+      const lessonsLeftCell = row.insertCell(5);
+      lessonsLeftCell.textContent = entry.lessonsLeft;
+
+      const actionsCell = row.insertCell(6);
+      const latestLessonCell = row.insertCell(7);
+      latestLessonCell.textContent = '-';
+
+      const deleteCell = row.insertCell(8);
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '🗑️';
+      deleteBtn.onclick = function () {
+        if (confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτήν την εγγραφή;')) {
+          row.remove();
+        }
+      };
+
+      const minusBtn = document.createElement('button');
+      minusBtn.textContent = '−';
+      minusBtn.style.margin = '0 5px';
+      minusBtn.style.width = '30px';
+      minusBtn.style.height = '30px';
+      minusBtn.style.fontSize = '18px';
+      minusBtn.onclick = function () {
+        if (confirm('Σίγουρα θέλετε να αφαιρέσετε ένα μάθημα;')) {
+          let current = parseInt(lessonsLeftCell.textContent);
+          if (current > 0) {
+            lessonsLeftCell.textContent = current - 1;
+            const now = new Date().toLocaleString();
+            latestLessonCell.textContent = now;
+          } else {
+            alert('Αυτή η ενέργεια δεν είναι δυνατή.');
+          }
+        }
+      };
+
+      const plusBtn = document.createElement('button');
+      plusBtn.textContent = '+';
+      plusBtn.style.margin = '0 5px';
+      plusBtn.style.width = '30px';
+      plusBtn.style.height = '30px';
+      plusBtn.style.fontSize = '18px';
+      plusBtn.onclick = function () {
+        if (confirm('Σίγουρα θέλετε να προσθέσετε ένα μάθημα;')) {
+          let current = parseInt(lessonsLeftCell.textContent);
+          lessonsLeftCell.textContent = current + 1;
+        }
+      };
+
+      actionsCell.appendChild(minusBtn);
+      actionsCell.appendChild(plusBtn);
+      deleteCell.appendChild(deleteBtn);
+    }
+function addManualEntry() {
+  const name = document.getElementById('name').value.trim();
+  const surname = document.getElementById('surname').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const lessonsBooked = parseInt(document.getElementById('lessonsBooked').value);
+  const discipline = document.getElementById('discipline').value;
+
+  if (!name || !surname || !phone || isNaN(lessonsBooked)) {
+    alert('Συμπληρώστε όλα τα πεδία σωστά.');
+    return;
+  }
+
+  if (phone.length < 10 || !/^\d+$/.test(phone)) {
+    alert('Ο αριθμός τηλεφώνου πρέπει να περιέχει τουλάχιστον 10 ψηφία.');
+    return;
+  }
+
+  const entry = {
+    name,
+    surname,
+    phone,
+    discipline,
+    lessonsBooked,
+    lessonsLeft: lessonsBooked
+  };
+
+  addRow(entry);
+
+  fetch("https://script.google.com/macros/s/AKfycbw030MSb7oU_xbqphZJVj926HZ068VNrGOWvyS9p-mzpoXruGRx8bufyolLyFvUua75pg/exec", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entry)
+  }).then(response => response.text())
+    .then(result => console.log("✅ Sent to Google Sheets:", result))
+    .catch(error => console.error("❌ Error sending to Sheets:", error));
+
+  document.getElementById('name').value = '';
+  document.getElementById('surname').value = '';
+  document.getElementById('phone').value = '';
+  document.getElementById('lessonsBooked').value = '';
+}
+
+    document.getElementById('excelFile').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rawEntries = XLSX.utils.sheet_to_json(sheet);
+
+          console.log('✅ Excel file loaded');
+          console.log('📄 Parsed entries:', rawEntries);
+
+          let validRows = 0;
+
+          rawEntries.forEach((originalEntry, index) => {
+            const entry = {};
+            Object.keys(originalEntry).forEach(key => {
+              const cleanKey = key.toLowerCase().trim();
+              entry[cleanKey] = originalEntry[key];
+            });
+
+            console.log(`🔍 Row ${index + 1}:`, entry);
+
+            if (entry.name && entry.surname && entry.phone && entry['lessons booked']) {
+              addRow({
+                name: entry.name,
+                surname: entry.surname,
+                phone: entry.phone,
+                discipline: entry.discipline || '-',
+                lessonsBooked: entry['lessons booked'],
+                lessonsLeft: entry['lessons booked']
+              });
+              validRows++;
+            }
+          });
+
+          if (validRows === 0) {
+            alert('Το αρχείο Excel δεν περιέχει έγκυρες εγγραφές. Ελέγξτε τις επικεφαλίδες και τα δεδομένα.');
+          }
+        } catch (err) {
+          console.error('❌ Σφάλμα κατά την ανάγνωση του αρχείου:', err);
+          alert('Παρουσιάστηκε σφάλμα κατά την ανάγνωση του αρχείου Excel.');
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+</script>
+
+<script>
+  setTimeout(() => {
+    const duration = 3 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+
+    function randomInRange(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    const interval = setInterval(function () {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+      });
+    }, 250);
+  }, 500);
+</script>
+</body>
+</html>
