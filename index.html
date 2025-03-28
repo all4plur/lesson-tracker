@@ -148,29 +148,17 @@ function addManualEntry() {
 
   addRow(entry);
 
-  fetch("https://corsproxy.io/?https://script.google.com/macros/s/AKfycbw030MSb7oU_xbqphZJVj926HZ068VNrGOWvyS9p-mzpoXruGRx8bufyolLyFvUua75pg/exec", {
-  mode: "no-cors",
+  const formData = new URLSearchParams();
+  for (const key in entry) {
+    formData.append(key, entry[key]);
+  }
+
+  fetch("https://script.google.com/macros/s/AKfycbw030MSb7oU_xbqphZJVj926HZ068VNrGOWvyS9p-mzpoXruGRx8bufyolLyFvUua75pg/exec", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(entry)
-  }).then(response => response.text())
-    .then(result => console.log("✅ Sent to Google Sheets:", result))
-    .catch(error => console.error("❌ Error sending to Sheets:", error));
-
-  document.getElementById('name').value = '';
-  document.getElementById('surname').value = '';
-  document.getElementById('phone').value = '';
-  document.getElementById('lessonsBooked').value = '';
-}
-
-    document.getElementById('excelFile').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-
-      reader.onload = function (e) {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
+    mode: "no-cors",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: formData
+  });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const rawEntries = XLSX.utils.sheet_to_json(sheet);
 
