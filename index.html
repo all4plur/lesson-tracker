@@ -148,7 +148,7 @@ function addManualEntry() {
 
   addRow(entry);
 
-  fetch("https://script.google.com/macros/s/AKfycbw030MSb7oU_xbqphZJVj926HZ068VNrGOWvyS9p-mzpoXruGRx8bufyolLyFvUua75pg/exec", {
+  fetch("https://corsproxy.io/?https://script.google.com/macros/s/AKfycbw030MSb7oU_xbqphZJVj926HZ068VNrGOWvyS9p-mzpoXruGRx8bufyolLyFvUua75pg/exec", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(entry)
